@@ -25,7 +25,11 @@ LIBPATHS = $(addprefix -L, $(LIBS))
 COMMA=,
 SOPATHS=$(addprefix -Wl$(COMMA)-rpath$(COMMA), $(LIBS))
 
-DYNAMIC_LINKINGS += -lreadline -lncurses
+# CLI specific libraries (only needed for redis_cli)
+CLI_DYNAMIC_LINKINGS = -lreadline -lncurses
+# Basic dynamic linkings for other programs
+BASIC_DYNAMIC_LINKINGS = 
+
 PRESS_SOURCES = redis_press.cpp
 NAMING_PRESS_SOURCES = redis_naming_press.cpp
 CLI_SOURCES = redis_cli.cpp
@@ -43,12 +47,20 @@ ifeq ($(SYSTEM),Darwin)
 	# *.a must be explicitly specified in clang
 	STATIC_LINKINGS += $(BRPC_PATH)/output/lib/libbrpc.a
  endif
-	LINK_OPTIONS_SO = $^ $(STATIC_LINKINGS) $(DYNAMIC_LINKINGS)
-	LINK_OPTIONS = $^ $(STATIC_LINKINGS) $(DYNAMIC_LINKINGS)
+	# Link options for CLI (with readline/ncurses)
+	CLI_LINK_OPTIONS_SO = $^ $(STATIC_LINKINGS) $(CLI_DYNAMIC_LINKINGS)
+	CLI_LINK_OPTIONS = $^ $(STATIC_LINKINGS) $(CLI_DYNAMIC_LINKINGS)
+	# Link options for other programs (without readline/ncurses)
+	BASIC_LINK_OPTIONS_SO = $^ $(STATIC_LINKINGS) $(BASIC_DYNAMIC_LINKINGS)
+	BASIC_LINK_OPTIONS = $^ $(STATIC_LINKINGS) $(BASIC_DYNAMIC_LINKINGS)
 else ifeq ($(SYSTEM),Linux)
 	STATIC_LINKINGS += -lbrpc
-	LINK_OPTIONS_SO = -Xlinker "-(" $^ -Xlinker "-)" $(STATIC_LINKINGS) $(DYNAMIC_LINKINGS)
-	LINK_OPTIONS = -Xlinker "-(" $^ -Wl,-Bstatic $(STATIC_LINKINGS) -Wl,-Bdynamic -Xlinker "-)" $(DYNAMIC_LINKINGS)
+	# Link options for CLI (with readline/ncurses)
+	CLI_LINK_OPTIONS_SO = -Xlinker "-(" $^ -Xlinker "-)" $(STATIC_LINKINGS) $(CLI_DYNAMIC_LINKINGS)
+	CLI_LINK_OPTIONS = -Xlinker "-(" $^ -Wl,-Bstatic $(STATIC_LINKINGS) -Wl,-Bdynamic -Xlinker "-)" $(CLI_DYNAMIC_LINKINGS)
+	# Link options for other programs (without readline/ncurses)
+	BASIC_LINK_OPTIONS_SO = -Xlinker "-(" $^ -Xlinker "-)" $(STATIC_LINKINGS) $(BASIC_DYNAMIC_LINKINGS)
+	BASIC_LINK_OPTIONS = -Xlinker "-(" $^ -Wl,-Bstatic $(STATIC_LINKINGS) -Wl,-Bdynamic -Xlinker "-)" $(BASIC_DYNAMIC_LINKINGS)
 endif
 
 .PHONY:all
@@ -62,33 +74,33 @@ clean:
 redis_press:$(PRESS_OBJS)
 	@echo "> Linking $@"
 ifneq ("$(LINK_SO)", "")
-	$(CXX) $(LIBPATHS) $(SOPATHS) $(LINK_OPTIONS_SO) -o $@
+	$(CXX) $(LIBPATHS) $(SOPATHS) $(BASIC_LINK_OPTIONS_SO) -o $@
 else
-	$(CXX) $(LIBPATHS) $(LINK_OPTIONS) -o $@
+	$(CXX) $(LIBPATHS) $(BASIC_LINK_OPTIONS) -o $@
 endif
 
 redis_naming_press:$(NAMING_PRESS_OBJS)
 	@echo "> Linking $@"
 ifneq ("$(LINK_SO)", "")
-	$(CXX) $(LIBPATHS) $(SOPATHS) $(LINK_OPTIONS_SO) -o $@
+	$(CXX) $(LIBPATHS) $(SOPATHS) $(BASIC_LINK_OPTIONS_SO) -o $@
 else
-	$(CXX) $(LIBPATHS) $(LINK_OPTIONS) -o $@
+	$(CXX) $(LIBPATHS) $(BASIC_LINK_OPTIONS) -o $@
 endif
 
 redis_cli:$(CLI_OBJS)
 	@echo "> Linking $@"
 ifneq ("$(LINK_SO)", "")
-	$(CXX) $(LIBPATHS) $(SOPATHS) $(LINK_OPTIONS_SO) -o $@
+	$(CXX) $(LIBPATHS) $(SOPATHS) $(CLI_LINK_OPTIONS_SO) -o $@
 else
-	$(CXX) $(LIBPATHS) $(LINK_OPTIONS) -o $@
+	$(CXX) $(LIBPATHS) $(CLI_LINK_OPTIONS) -o $@
 endif
 
 redis_server:$(SERVER_OBJS)
 	@echo "> Linking $@"
 ifneq ("$(LINK_SO)", "")
-	$(CXX) $(LIBPATHS) $(SOPATHS) $(LINK_OPTIONS_SO) -o $@
+	$(CXX) $(LIBPATHS) $(SOPATHS) $(BASIC_LINK_OPTIONS_SO) -o $@
 else
-	$(CXX) $(LIBPATHS) $(LINK_OPTIONS) -o $@
+	$(CXX) $(LIBPATHS) $(BASIC_LINK_OPTIONS) -o $@
 endif
 
 %.o:%.cpp

@@ -152,8 +152,10 @@ add_executable(redis_press redis_press.cpp)
 add_executable(redis_naming_press redis_naming_press.cpp)
 add_executable(redis_server redis_server.cpp)
 
+# AUX_LIB is only needed for redis_cli (interactive command line interface)
 set(AUX_LIB readline ncurses)
 
+# Link libraries for each target
 target_link_libraries(redis_cli ${BRPC_LIB} ${DYNAMIC_LIB} ${AUX_LIB})
 target_link_libraries(redis_press ${BRPC_LIB} ${DYNAMIC_LIB})
 target_link_libraries(redis_naming_press ${BRPC_LIB} ${DYNAMIC_LIB})
