@@ -27,7 +27,7 @@ SOPATHS=$(addprefix -Wl$(COMMA)-rpath$(COMMA), $(LIBS))
 
 # CLI specific libraries (only needed for redis_cli)
 CLI_DYNAMIC_LINKINGS = -lreadline -lncurses
-# Basic dynamic linkings for other programs
+# Basic dynamic linkings for all programs
 BASIC_DYNAMIC_LINKINGS = -lgflags -lprotobuf -lleveldb -lssl -lcrypto -lpthread -lz -ldl
 
 PRESS_SOURCES = redis_press.cpp
@@ -47,17 +47,17 @@ ifeq ($(SYSTEM),Darwin)
 	# *.a must be explicitly specified in clang
 	STATIC_LINKINGS += $(BRPC_PATH)/output/lib/libbrpc.a
  endif
-	# Link options for CLI (with readline/ncurses)
-	CLI_LINK_OPTIONS_SO = $^ $(STATIC_LINKINGS) $(CLI_DYNAMIC_LINKINGS)
-	CLI_LINK_OPTIONS = $^ $(STATIC_LINKINGS) $(CLI_DYNAMIC_LINKINGS)
+	# Link options for CLI (with readline/ncurses + basic libs)
+	CLI_LINK_OPTIONS_SO = $^ $(STATIC_LINKINGS) $(BASIC_DYNAMIC_LINKINGS) $(CLI_DYNAMIC_LINKINGS)
+	CLI_LINK_OPTIONS = $^ $(STATIC_LINKINGS) $(BASIC_DYNAMIC_LINKINGS) $(CLI_DYNAMIC_LINKINGS)
 	# Link options for other programs (without readline/ncurses)
 	BASIC_LINK_OPTIONS_SO = $^ $(STATIC_LINKINGS) $(BASIC_DYNAMIC_LINKINGS)
 	BASIC_LINK_OPTIONS = $^ $(STATIC_LINKINGS) $(BASIC_DYNAMIC_LINKINGS)
 else ifeq ($(SYSTEM),Linux)
 	STATIC_LINKINGS += -lbrpc
-	# Link options for CLI (with readline/ncurses)
-	CLI_LINK_OPTIONS_SO = -Xlinker "-(" $^ -Xlinker "-)" $(STATIC_LINKINGS) $(CLI_DYNAMIC_LINKINGS)
-	CLI_LINK_OPTIONS = -Xlinker "-(" $^ -Wl,-Bstatic $(STATIC_LINKINGS) -Wl,-Bdynamic -Xlinker "-)" $(CLI_DYNAMIC_LINKINGS)
+	# Link options for CLI (with readline/ncurses + basic libs)
+	CLI_LINK_OPTIONS_SO = -Xlinker "-(" $^ -Xlinker "-)" $(STATIC_LINKINGS) $(BASIC_DYNAMIC_LINKINGS) $(CLI_DYNAMIC_LINKINGS)
+	CLI_LINK_OPTIONS = -Xlinker "-(" $^ -Wl,-Bstatic $(STATIC_LINKINGS) -Wl,-Bdynamic -Xlinker "-)" $(BASIC_DYNAMIC_LINKINGS) $(CLI_DYNAMIC_LINKINGS)
 	# Link options for other programs (without readline/ncurses)
 	BASIC_LINK_OPTIONS_SO = -Xlinker "-(" $^ -Xlinker "-)" $(STATIC_LINKINGS) $(BASIC_DYNAMIC_LINKINGS)
 	BASIC_LINK_OPTIONS = -Xlinker "-(" $^ -Wl,-Bstatic $(STATIC_LINKINGS) -Wl,-Bdynamic -Xlinker "-)" $(BASIC_DYNAMIC_LINKINGS)
