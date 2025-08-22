@@ -28,7 +28,7 @@ SOPATHS=$(addprefix -Wl$(COMMA)-rpath$(COMMA), $(LIBS))
 # CLI specific libraries (only needed for redis_cli)
 CLI_DYNAMIC_LINKINGS = -lreadline -lncurses
 # Basic dynamic linkings for other programs
-BASIC_DYNAMIC_LINKINGS = 
+BASIC_DYNAMIC_LINKINGS = -lgflags -lprotobuf -lleveldb -lssl -lcrypto -lpthread -lz -ldl
 
 PRESS_SOURCES = redis_press.cpp
 NAMING_PRESS_SOURCES = redis_naming_press.cpp
