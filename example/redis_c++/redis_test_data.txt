@@ -1,0 +1,46 @@
+# Redis test data configuration file
+# Format: key=value
+# Lines starting with # are comments
+
+user:1001={"name":"张三","age":25,"city":"北京"}
+user:1002={"name":"李四","age":30,"city":"上海"}
+user:1003={"name":"王五","age":28,"city":"广州"}
+user:1004={"name":"赵六","age":32,"city":"深圳"}
+user:1005={"name":"钱七","age":27,"city":"杭州"}
+
+session:abc123={"user_id":1001,"login_time":"2024-01-01 10:00:00","ip":"192.168.1.100"}
+session:def456={"user_id":1002,"login_time":"2024-01-01 11:00:00","ip":"192.168.1.101"}
+session:ghi789={"user_id":1003,"login_time":"2024-01-01 12:00:00","ip":"192.168.1.102"}
+
+cache:product:100={"id":100,"name":"iPhone 15","price":7999,"stock":50}
+cache:product:101={"id":101,"name":"MacBook Pro","price":15999,"stock":20}
+cache:product:102={"id":102,"name":"iPad Air","price":4999,"stock":30}
+
+counter:page_view=1000000
+counter:user_online=5000
+counter:order_today=2500
+
+config:max_connections=1000
+config:timeout_seconds=30
+config:retry_count=3
+
+# 更多测试数据
+article:2001={"title":"Redis性能优化","author":"技术专家","views":15000}
+article:2002={"title":"分布式缓存设计","author":"架构师","views":8500}
+article:2003={"title":"高并发系统实践","author":"开发工程师","views":12000}
+
+order:o001={"id":"o001","user_id":1001,"amount":299.99,"status":"paid"}
+order:o002={"id":"o002","user_id":1002,"amount":599.99,"status":"pending"}
+order:o003={"id":"o003","user_id":1003,"amount":199.99,"status":"shipped"}
+
+# 长字符串测试
+long_text:1=这是一个很长的文本内容，用于测试Redis在处理长字符串时的性能表现。这个文本包含了中文字符，可以用来测试UTF-8编码的处理能力。在实际的业务场景中，我们经常需要存储各种长度的文本内容，比如文章内容、用户评论、商品描述等等。
+long_text:2=Another long text in English to test the performance of Redis when handling long strings with different character encodings. This text contains English characters and can be used to test ASCII encoding processing capabilities.
+
+# 数值测试
+score:math:1001=95.5
+score:english:1001=88.0
+score:physics:1001=92.5
+score:math:1002=87.5
+score:english:1002=91.0
+score:physics:1002=89.5
