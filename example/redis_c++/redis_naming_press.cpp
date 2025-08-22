@@ -37,7 +37,6 @@
 #include <fstream>
 #include <gflags/gflags.h>
 #include <random>
-#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -329,8 +328,8 @@ bool InitializeKeys(brpc::Channel *channel,
     // 为当前批次的每个键值对添加SETEX命令
     for (size_t j = i; j < end; ++j) {
       if (!request.AddCommand("SETEX %s %d %s", kv_pairs[j].key.c_str(),
-                              FLAGS_expire_seconds,
-                              kv_pairs[j].value.c_str())) {
+                              FLAGS_expire_seconds, kv_pairs[j].value.c_str(),
+                              kv_pairs[j].value.size())) {
         LOG(ERROR) << "Failed to add SETEX command for key: "
                    << kv_pairs[j].key;
         return false;
@@ -424,7 +423,7 @@ static void *get_only_sender(void *void_args) {
     }
 
     // 添加GET命令
-    if (!request.AddCommand("GET %s", key.c_str())) {
+    if (!request.AddCommand("GET %b", key.c_str(), key.size())) {
       LOG(ERROR) << "Failed to add GET command";
       continue;
     }
@@ -502,8 +501,9 @@ static void *mixed_sender(void *void_args) {
       const auto &kv = (*args->kv_pairs)[idx];
 
       // 使用SETEX命令自动设置过期时间
-      if (!request.AddCommand("SETEX %s %d %s", kv.key.c_str(),
-                              FLAGS_expire_seconds, kv.value.c_str())) {
+      if (!request.AddCommand("SETEX %s %d %b", kv.key.c_str(),
+                              FLAGS_expire_seconds, kv.value.c_str(),
+                              kv.value.size())) {
         LOG(ERROR) << "Failed to add SETEX command";
         continue;
       }
