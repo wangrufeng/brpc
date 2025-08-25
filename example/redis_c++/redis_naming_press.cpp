@@ -381,8 +381,7 @@ static void *get_only_sender(void *void_args) {
   SenderArgs *args = (SenderArgs *)void_args;
 
   // 初始化随机数生成器
-  std::random_device rd;
-  std::mt19937 gen(rd());
+  std::mt19937 gen(std::random_device{}());
   std::uniform_real_distribution<> hit_dis(0.0, 1.0); // 用于决定是否命中
   std::uniform_int_distribution<> key_dis(0, args->kv_pairs->size() -
                                                  1); // 选择存在的键
@@ -478,8 +477,7 @@ static void *mixed_sender(void *void_args) {
   SenderArgs *args = (SenderArgs *)void_args;
 
   // 初始化随机数生成器
-  std::random_device rd;
-  std::mt19937 gen(rd());
+  std::mt19937 gen(std::random_device{}());
   std::uniform_real_distribution<> op_dis(0.0, 1.0); // 用于决定操作类型
   std::uniform_real_distribution<> hit_dis(0.0, 1.0); // 用于决定GET是否命中
   std::uniform_int_distribution<> key_dis(0,
