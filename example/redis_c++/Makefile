@@ -25,6 +25,30 @@ LIBPATHS = $(addprefix -L, $(LIBS))
 COMMA=,
 SOPATHS=$(addprefix -Wl$(COMMA)-rpath$(COMMA), $(LIBS))
 
+# ==================== 部署包配置 ====================
+# 部署包目录名
+DEPLOY_DIR = redis_naming_press_deploy
+# 部署包中的库目录名
+LIB_SUBDIR = lib
+# 完整的库目录路径
+DEPLOY_LIB_DIR = $(DEPLOY_DIR)/$(LIB_SUBDIR)
+
+# ==================== 依赖库版本配置 ====================
+# gflags库配置
+GFLAGS_SO_VERSION = 2.2
+GFLAGS_SO_MAJOR = 2
+GFLAGS_SO_NAME = libgflags.so.$(GFLAGS_SO_VERSION)
+GFLAGS_SO_LINK = libgflags.so.$(GFLAGS_SO_MAJOR)
+
+# protobuf库配置
+PROTOBUF_SO_VERSION = 25
+PROTOBUF_SO_NAME = libprotobuf.so.$(PROTOBUF_SO_VERSION)
+PROTOBUF_SO_LINK = libprotobuf.so
+
+# 常见库路径
+LIB_SEARCH_PATHS = /usr/local/lib /usr/lib64 /usr/lib
+
+# ==================== 链接库分类 ====================
 # CLI specific libraries (only needed for redis_cli)
 CLI_DYNAMIC_LINKINGS = -lreadline -lncurses
 # Static linkings for available static libraries
@@ -34,9 +58,10 @@ BUNDLED_DYNAMIC_LINKINGS = -lgflags -lprotobuf
 # System dynamic linkings (must remain dynamic)
 SYSTEM_DYNAMIC_LINKINGS = -lssl -lcrypto -lpthread -lz -ldl
 
-# Set RPATH to look for libraries in same directory as executable
-RPATH_FLAGS = -Wl,-rpath,'$$ORIGIN'
+# Set RPATH to look for libraries in lib subdirectory
+RPATH_FLAGS = -Wl,-rpath,'$$ORIGIN/$(LIB_SUBDIR)'
 
+# ==================== 源文件配置 ====================
 PRESS_SOURCES = redis_press.cpp
 NAMING_PRESS_SOURCES = redis_naming_press.cpp
 CLI_SOURCES = redis_cli.cpp
@@ -47,6 +72,7 @@ NAMING_PRESS_OBJS = $(addsuffix .o, $(basename $(NAMING_PRESS_SOURCES)))
 CLI_OBJS = $(addsuffix .o, $(basename $(CLI_SOURCES))) 
 SERVER_OBJS = $(addsuffix .o, $(basename $(SERVER_SOURCES)))
 
+# ==================== 平台相关链接选项 ====================
 ifeq ($(SYSTEM),Darwin)
  ifneq ("$(LINK_SO)", "")
 	STATIC_LINKINGS += -lbrpc
@@ -70,43 +96,59 @@ else ifeq ($(SYSTEM),Linux)
 	BASIC_LINK_OPTIONS = -Xlinker "-(" $^ -Wl,-Bstatic $(STATIC_LINKINGS) $(STATIC_BASIC_LINKINGS) -Wl,-Bdynamic -Xlinker "-)" $(BUNDLED_DYNAMIC_LINKINGS) $(SYSTEM_DYNAMIC_LINKINGS) $(RPATH_FLAGS)
 endif
 
+# ==================== 构建目标 ====================
 .PHONY:all
 all: redis_press redis_naming_press redis_cli redis_server
 
 .PHONY:package
 package: redis_naming_press
 	@echo "> Creating deployment package..."
-	@mkdir -p redis_naming_press_deploy
-	@cp redis_naming_press redis_naming_press_deploy/
-	@echo "> Copying required libraries to same directory..."
-	@if [ -f /usr/local/lib/libgflags.so.2.2 ]; then \
-		cp /usr/local/lib/libgflags.so.2.2 redis_naming_press_deploy/; \
-		ln -sf libgflags.so.2.2 redis_naming_press_deploy/libgflags.so.2; \
-	elif [ -f /usr/lib64/libgflags.so.2.2 ]; then \
-		cp /usr/lib64/libgflags.so.2.2 redis_naming_press_deploy/; \
-		ln -sf libgflags.so.2.2 redis_naming_press_deploy/libgflags.so.2; \
-	else \
-		find /usr -name "libgflags.so*" 2>/dev/null | head -1 | xargs -I {} cp {} redis_naming_press_deploy/ || echo "Warning: libgflags.so not found"; \
+	@mkdir -p $(DEPLOY_LIB_DIR)
+	@cp redis_naming_press $(DEPLOY_DIR)/
+	@echo "> Copying required libraries to $(LIB_SUBDIR) directory..."
+	@$(call copy_library,$(GFLAGS_SO_NAME),$(GFLAGS_SO_LINK),gflags)
+	@$(call copy_library,$(PROTOBUF_SO_NAME),$(PROTOBUF_SO_LINK),protobuf)
+	@if [ -f README_redis_naming_press.md ]; then cp README_redis_naming_press.md $(DEPLOY_DIR)/; fi
+	@echo "> Package created: $(DEPLOY_DIR)/"
+	@echo "> Usage: cd $(DEPLOY_DIR) && ./redis_naming_press --help"
+
+# 定义复制库文件的函数
+# 参数: $(1)=库文件名, $(2)=符号链接名, $(3)=库描述
+define copy_library
+	@found=false; \
+	for path in $(LIB_SEARCH_PATHS); do \
+		if [ -f "$$path/$(1)" ]; then \
+			echo "  Found $(3) library: $$path/$(1)"; \
+			cp "$$path/$(1)" $(DEPLOY_LIB_DIR)/; \
+			if [ "$(1)" != "$(2)" ]; then \
+				ln -sf $(1) $(DEPLOY_LIB_DIR)/$(2); \
+			fi; \
+			found=true; \
+			break; \
+		fi; \
+	done; \
+	if [ "$$found" = "false" ]; then \
+		echo "  Warning: $(3) library ($(1)) not found in standard paths"; \
+		libfile=$$(find /usr -name "$(1)" 2>/dev/null | head -1); \
+		if [ -n "$$libfile" ]; then \
+			echo "  Found $(3) library: $$libfile"; \
+			cp "$$libfile" $(DEPLOY_LIB_DIR)/; \
+			if [ "$(1)" != "$(2)" ]; then \
+				ln -sf $(1) $(DEPLOY_LIB_DIR)/$(2); \
+			fi; \
+		else \
+			echo "  Error: $(3) library not found anywhere"; \
+		fi; \
 	fi
-	@if [ -f /usr/local/lib/libprotobuf.so.25 ]; then \
-		cp /usr/local/lib/libprotobuf.so.25 redis_naming_press_deploy/; \
-		ln -sf libprotobuf.so.25 redis_naming_press_deploy/libprotobuf.so; \
-	elif [ -f /usr/lib64/libprotobuf.so.25 ]; then \
-		cp /usr/lib64/libprotobuf.so.25 redis_naming_press_deploy/; \
-		ln -sf libprotobuf.so.25 redis_naming_press_deploy/libprotobuf.so; \
-	else \
-		find /usr -name "libprotobuf.so*" 2>/dev/null | head -1 | xargs -I {} cp {} redis_naming_press_deploy/ || echo "Warning: libprotobuf.so not found"; \
-	fi
-	@if [ -f README_redis_naming_press.md ]; then cp README_redis_naming_press.md redis_naming_press_deploy/; fi
-	@echo "> Package created: redis_naming_press_deploy/"
-	@echo "> Usage: cd redis_naming_press_deploy && ./redis_naming_press --help"
+endef
 
 .PHONY:clean
 clean:
 	@echo "> Cleaning"
 	rm -rf redis_press redis_naming_press redis_cli redis_server $(PRESS_OBJS) $(NAMING_PRESS_OBJS) $(CLI_OBJS) $(SERVER_OBJS)
-	rm -rf redis_naming_press_deploy
+	rm -rf $(DEPLOY_DIR)
 
+# ==================== 编译目标 ====================
 redis_press:$(PRESS_OBJS)
 	@echo "> Linking $@"
 ifneq ("$(LINK_SO)", "")
