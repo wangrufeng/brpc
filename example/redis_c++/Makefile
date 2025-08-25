@@ -34,8 +34,8 @@ BUNDLED_DYNAMIC_LINKINGS = -lgflags -lprotobuf
 # System dynamic linkings (must remain dynamic)
 SYSTEM_DYNAMIC_LINKINGS = -lssl -lcrypto -lpthread -lz -ldl
 
-# Set RPATH to look for libraries in ./lib directory relative to executable
-RPATH_FLAGS = -Wl,-rpath,'$$ORIGIN/lib' -Wl,-rpath,'$$ORIGIN'
+# Set RPATH to look for libraries in same directory as executable
+RPATH_FLAGS = -Wl,-rpath,'$$ORIGIN'
 
 PRESS_SOURCES = redis_press.cpp
 NAMING_PRESS_SOURCES = redis_naming_press.cpp
@@ -76,48 +76,30 @@ all: redis_press redis_naming_press redis_cli redis_server
 .PHONY:package
 package: redis_naming_press
 	@echo "> Creating deployment package..."
-	@mkdir -p redis_naming_press_deploy/lib
+	@mkdir -p redis_naming_press_deploy
 	@cp redis_naming_press redis_naming_press_deploy/
-	@echo "> Copying required libraries..."
+	@echo "> Copying required libraries to same directory..."
 	@if [ -f /usr/local/lib/libgflags.so.2.2 ]; then \
-		cp /usr/local/lib/libgflags.so.2.2 redis_naming_press_deploy/lib/; \
-		ln -sf libgflags.so.2.2 redis_naming_press_deploy/lib/libgflags.so.2; \
+		cp /usr/local/lib/libgflags.so.2.2 redis_naming_press_deploy/; \
+		ln -sf libgflags.so.2.2 redis_naming_press_deploy/libgflags.so.2; \
 	elif [ -f /usr/lib64/libgflags.so.2.2 ]; then \
-		cp /usr/lib64/libgflags.so.2.2 redis_naming_press_deploy/lib/; \
-		ln -sf libgflags.so.2.2 redis_naming_press_deploy/lib/libgflags.so.2; \
+		cp /usr/lib64/libgflags.so.2.2 redis_naming_press_deploy/; \
+		ln -sf libgflags.so.2.2 redis_naming_press_deploy/libgflags.so.2; \
 	else \
-		find /usr -name "libgflags.so*" 2>/dev/null | head -1 | xargs -I {} cp {} redis_naming_press_deploy/lib/ || echo "Warning: libgflags.so not found"; \
+		find /usr -name "libgflags.so*" 2>/dev/null | head -1 | xargs -I {} cp {} redis_naming_press_deploy/ || echo "Warning: libgflags.so not found"; \
 	fi
 	@if [ -f /usr/local/lib/libprotobuf.so.25 ]; then \
-		cp /usr/local/lib/libprotobuf.so.25 redis_naming_press_deploy/lib/; \
-		ln -sf libprotobuf.so.25 redis_naming_press_deploy/lib/libprotobuf.so; \
+		cp /usr/local/lib/libprotobuf.so.25 redis_naming_press_deploy/; \
+		ln -sf libprotobuf.so.25 redis_naming_press_deploy/libprotobuf.so; \
 	elif [ -f /usr/lib64/libprotobuf.so.25 ]; then \
-		cp /usr/lib64/libprotobuf.so.25 redis_naming_press_deploy/lib/; \
-		ln -sf libprotobuf.so.25 redis_naming_press_deploy/lib/libprotobuf.so; \
+		cp /usr/lib64/libprotobuf.so.25 redis_naming_press_deploy/; \
+		ln -sf libprotobuf.so.25 redis_naming_press_deploy/libprotobuf.so; \
 	else \
-		find /usr -name "libprotobuf.so*" 2>/dev/null | head -1 | xargs -I {} cp {} redis_naming_press_deploy/lib/ || echo "Warning: libprotobuf.so not found"; \
+		find /usr -name "libprotobuf.so*" 2>/dev/null | head -1 | xargs -I {} cp {} redis_naming_press_deploy/ || echo "Warning: libprotobuf.so not found"; \
 	fi
 	@if [ -f README_redis_naming_press.md ]; then cp README_redis_naming_press.md redis_naming_press_deploy/; fi
-	@if [ -f redis_test_data.txt ]; then cp redis_test_data.txt redis_naming_press_deploy/; fi
-	@if [ -f DEPLOYMENT_GUIDE.md ]; then cp DEPLOYMENT_GUIDE.md redis_naming_press_deploy/; fi
-	@echo "> Creating startup script..."
-	@cat > redis_naming_press_deploy/start.sh << 'EOF'
-#!/bin/bash
-# Redis命名服务压测工具启动脚本
-# 自动设置库路径并启动程序
-
-# 获取脚本所在目录
-SCRIPT_DIR="$$(cd "$$(dirname "$$0")" && pwd)"
-
-# 设置库路径
-export LD_LIBRARY_PATH="$$SCRIPT_DIR/lib:$$LD_LIBRARY_PATH"
-
-# 启动程序
-exec "$$SCRIPT_DIR/redis_naming_press" "$$@"
-EOF
-	@chmod +x redis_naming_press_deploy/start.sh
 	@echo "> Package created: redis_naming_press_deploy/"
-	@echo "> Usage: ./redis_naming_press_deploy/start.sh --help"
+	@echo "> Usage: cd redis_naming_press_deploy && ./redis_naming_press --help"
 
 .PHONY:clean
 clean:
